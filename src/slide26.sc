@@ -31,17 +31,9 @@ def BenAndJerry2(flavour: String) : Flavour = {
 BenAndJerry2("Cookie")
 BenAndJerry2("Vanilla")
 
-
+////////////////////////
 // Pizza measurement to size: 7 = Personal, 9 = Small, 11 = Medium, 14 = Large,
 // with Medium as our default size
-// Pizza crusts: classic, italian, stuffed (+2.99 to the pizza cost).
-// Some pizzas can only have certain crusts.
-// Write a function that takes pizza size + crust as parameters, then calculates the cost:
-//Personal 5.99: classic
-//Small 10.99: classic, italian
-//Medium 12.99: classic, italian, stuffed + 2.99
-//Large 14.99: classic, italian, stuffed + 2.99
-
 case class Pizza(size: Int = 11) // default medium
 
 trait PizzaSize
@@ -64,11 +56,18 @@ val myPizza = Pizza()
 pizzaMeasurementToSize(myPizza) // Medium
 pizzaMeasurementToSize("something") // Invalid
 
+// Pizza crusts: classic, italian, stuffed (+2.99 to the pizza cost).
+// Some pizzas can only have certain crusts.
 trait Crust
 case object Classic extends Crust
 case object Italian extends Crust
 case object Stuffed extends Crust
 
+// Write a function that takes pizza size + crust as parameters, then calculates the cost:
+//Personal 5.99: classic
+//Small 10.99: classic, italian
+//Medium 12.99: classic, italian, stuffed + 2.99
+//Large 14.99: classic, italian, stuffed + 2.99
 def findPizzaCost(size: PizzaSize, crust: Crust) : Any = {
   size match {
     case Personal => {
