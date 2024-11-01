@@ -104,7 +104,7 @@ def billWithServiceCharge(items: List[MenuItem]): Unit = {
     }
     case _ => { // includes food
       premiumFoodItems.length match{ // includes premium items: 25%, capped at 40
-        case x if x > 0 => {
+        case numItems if numItems > 0 => {
           serviceCharge = roundToDP(min(itemTotal * 0.25, 40), 2)
           if (serviceCharge == 40) {
             println("Service charge @ 25% (capped at £40): £40.00")
@@ -159,6 +159,12 @@ object Currency extends Enumeration {
   val CHF = Value("CHF ")
 }
 
+// method to return a string with currency symbol + amount
+def moneyAmount(currency: Currency.Value, amount: Double): String = {
+  f"$currency$amount%.2f"
+}
+//moneyAmount(Currency.GBP, 8.75)
+
 def fullBill(items: List[MenuItem], card: Option[LoyaltyCard],
              staff: String = "Cashier", currency: Currency.Value = Currency.GBP): Unit = {
   val currentDateTime = LocalDateTime.now()
@@ -169,17 +175,18 @@ def fullBill(items: List[MenuItem], card: Option[LoyaltyCard],
   val happyHour = currentHour >= 18 && currentHour < 21
 
   val itemTotal: Double = items.map(item => item.cost).sum
-  println(f"Item total: $currency$itemTotal%.2f")
+  println(s"Item total: ${moneyAmount(currency, itemTotal)}")
   var happyHourReduction: Double = 0 // update later if needed
   var serviceCharge: Double = 0.00 // update later
   var totalBill: Double = itemTotal // update later
 
+  // apply happy hour discount if applicable
   if (happyHour){
     val drinkItems = items.filter(item => item.itemType == ItemType.Drink)
     happyHourReduction = roundToDP(drinkItems.map(item => item.cost).sum * 0.5, 2)
     totalBill -= happyHourReduction
-    println(f"Happy hour 50%% off drinks: -$currency$happyHourReduction%.2f")
-    println(f"Adjusted item total: $currency${totalBill}%.2f")
+    println(s"Happy hour 50% off drinks: -${moneyAmount(currency, happyHourReduction)}")
+    println(s"Adjusted item total: ${moneyAmount(currency, totalBill)}\n")
   }
 
   val foodItems = items.filter(item => item.itemType == ItemType.Food)
@@ -187,42 +194,7 @@ def fullBill(items: List[MenuItem], card: Option[LoyaltyCard],
   val hotFoodItems = foodItems.filter(item => item.temperature == Temperature.Hot)
   val standardItems = items.filter(item => item.grade == ItemGrade.Standard)
 
-  foodItems.length match {
-    case 0 => { // drinks only: no service charge
-      println(s"Service charge @ 0%: ${currency}0.00")
-    }
-    case _ => { // includes food
-      premiumFoodItems.length match{ // includes premium items: 25%, capped at 40
-        case x if x > 0 => {
-          serviceCharge = roundToDP(min(totalBill * 0.25, 40), 2)
-          if (serviceCharge == 40) {
-            println(s"Service charge @ 25% (capped at ${currency}40): ${currency}40.00")
-          } else{
-            println(f"Service charge @ 25%%: $currency$serviceCharge%.2f")
-          }
-        }
-        case _ => {
-          hotFoodItems.length match { // no premium items
-            case 0 => { // no hot food: 10%
-              serviceCharge = roundToDP(totalBill * 0.1, 2)
-              println(f"Service charge @ 10%%: $currency$serviceCharge%.2f")
-            }
-            case _ => { // includes hot food: 20%, capped at 20
-              serviceCharge = roundToDP(min(totalBill * 0.2, 20), 2)
-              if (serviceCharge == 20) {
-                println(s"Service charge @ 20% (capped at ${currency}20): ${currency}20.00")
-              } else{
-                println(f"Service charge @ 20%%: $currency$serviceCharge%.2f")
-              }
-            }
-          }
-        }
-      }
-    }
-      totalBill += serviceCharge
-  }
-  println(f"Total bill: $currency$totalBill%.2f")
-
+  // apply loyalty discount if customer has a card
   var discountAmount: Double = 0
   card match {
     case Some(LoyaltyCard(name, stars)) => {
@@ -241,23 +213,62 @@ def fullBill(items: List[MenuItem], card: Option[LoyaltyCard],
         }
 
         if (stars % 2 == 0 || stars > 8){ // discountPercentage is an integer
-          println(f"${discountPercentage}%.0f%% loyalty discount on standard items: -$currency$discountAmount%.2f")
+          println(f"${discountPercentage}%.0f%% loyalty discount on standard items: ${moneyAmount(currency, discountAmount)}")
         } else { // discountPercentage is a .5
-          println(f"${discountPercentage}%% loyalty discount on standard items: -$currency$discountAmount%.2f")
+          println(f"${discountPercentage}%% loyalty discount on standard items: -${moneyAmount(currency, discountAmount)}")
         }
+        totalBill -= discountAmount
 
       } else {
         println(s"Loyalty discount: -${currency}0.00")
       }
+      println(s"Subtotal: ${moneyAmount(currency, totalBill)}\n")
     }
-    case None => println("Loyalty card: None")
+    case None => println("Loyalty card: None\n")
   }
-  var totalToPay = totalBill - discountAmount
-  println(f"Total to pay: $currency$totalToPay%.2f")
+
+  // calculate service charge
+  foodItems.length match {
+    case 0 => { // drinks only: no service charge
+      println(s"Service charge @ 0%: ${currency}0.00")
+    }
+    case _ => { // includes food
+      premiumFoodItems.length match{ // includes premium items: 25%, capped at 40
+        case x if x > 0 => {
+          serviceCharge = roundToDP(min(totalBill * 0.25, 40), 2)
+          if (serviceCharge == 40) {
+            println(s"Service charge @ 25% (capped at ${currency}40): ${currency}40.00")
+          } else{
+            println(s"Service charge @ 25%: ${moneyAmount(currency, serviceCharge)}")
+          }
+        }
+        case _ => {
+          hotFoodItems.length match { // no premium items
+            case 0 => { // no hot food: 10%
+              serviceCharge = roundToDP(totalBill * 0.1, 2)
+              println(s"Service charge @ 10%: ${moneyAmount(currency, serviceCharge)}")
+            }
+            case _ => { // includes hot food: 20%, capped at 20
+              serviceCharge = roundToDP(min(totalBill * 0.2, 20), 2)
+              if (serviceCharge == 20) {
+                println(s"Service charge @ 20% (capped at ${currency}20): ${currency}20.00")
+              } else{
+                println(s"Service charge @ 20%: ${moneyAmount(currency, serviceCharge)}")
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  val totalToPay = totalBill + serviceCharge
+  println(s"Total to pay: ${moneyAmount(currency, totalToPay)}\n")
   println(s"You have been served by: $staff")
 }
 
 val currentStaff = "Mary"
+fullBill(List(Coffee, Coffee, Cola), Some(LoyaltyCard("John Smith", 6)))
 fullBill(List(Cola, CheeseSandwich, SteakSandwich), None, currency = Currency.EUR)
 fullBill(List(Cola, CheeseSandwich, SteakSandwich),
   Some(LoyaltyCard("John Smith", 3)), currency = Currency.USD)
