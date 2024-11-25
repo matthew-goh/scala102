@@ -234,7 +234,7 @@ def fullBill(items: List[MenuItem], card: Option[LoyaltyCard],
     }
     case _ => { // includes food
       premiumFoodItems.length match{ // includes premium items: 25%, capped at 40
-        case x if x > 0 => {
+        case numItems if numItems > 0 => {
           serviceCharge = roundToDP(min(totalBill * 0.25, 40), 2)
           if (serviceCharge == 40) {
             println(s"Service charge @ 25% (capped at ${currency}40): ${currency}40.00")
